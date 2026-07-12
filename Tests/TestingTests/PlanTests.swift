@@ -219,6 +219,60 @@ struct PlanTests {
     #expect(planTests.contains(testC))
   }
 
+  @Test("Composed hidden trait influences filtering")
+  func composedHiddenTraitInfluencesFiltering() async throws {
+    let suite = try #require(await test(for: ComposedTraitsInfluenceFilters.self))
+    let test = try #require(await testFunction(named: "neverCalled()", in: ComposedTraitsInfluenceFilters.self))
+    let tests = [suite, test]
+
+    let defaultPlan = await Runner.Plan(tests: tests, configuration: Configuration())
+    #expect(!defaultPlan.steps.map(\.test).contains(test))
+
+    var configuration = Configuration()
+    var filter = Configuration.TestFilter.unfiltered
+    filter.includeHiddenTests = true
+    configuration.testFilter = filter
+    let plan = await Runner.Plan(tests: tests, configuration: configuration)
+    #expect(plan.steps.map(\.test).contains(test))
+  }
+
+  @Test("Composed tag trait participates in tag filtering")
+  func composedTagTraitParticipatesInTagFiltering() async throws {
+    let test = try #require(await testFunction(named: "taggedViaComposition()", in: ComposedTagTraitTests.self))
+
+    var included = Configuration()
+    var includeFilter = Configuration.TestFilter(includingAnyOf: [.namedConstant])
+    includeFilter.includeHiddenTests = true
+    included.testFilter = includeFilter
+    let includedPlan = await Runner.Plan(tests: [test], configuration: included)
+    #expect(includedPlan.steps.map(\.test).contains(test))
+
+    var excluded = Configuration()
+    var excludeFilter = Configuration.TestFilter(excludingAnyOf: [.namedConstant])
+    excludeFilter.includeHiddenTests = true
+    excluded.testFilter = excludeFilter
+    let excludedPlan = await Runner.Plan(tests: [test], configuration: excluded)
+    #expect(!excludedPlan.steps.map(\.test).contains(test))
+  }
+
+  @Test("Composed condition trait is evaluated during planning")
+  func composedConditionTraitProducesSkip() async throws {
+    let test = try #require(await testFunction(named: "disabledViaComposition()", in: ComposedDisabledTraitTests.self))
+
+    var configuration = Configuration()
+    var filter = Configuration.TestFilter.unfiltered
+    filter.includeHiddenTests = true
+    configuration.testFilter = filter
+
+    let plan = await Runner.Plan(tests: [test], configuration: configuration)
+    let step = try #require(plan.steps.first { $0.test == test })
+    guard case let .skip(skipInfo) = step.action else {
+      Issue.record("Expected the composed .disabled trait to skip the test, but its action was \(step.action)")
+      return
+    }
+    #expect(skipInfo.comment == "Disabled via composition")
+  }
+
   @Test("Mixed included and excluded tests by ID")
   func mixedIncludedAndExcludedTests() async throws {
     let outerTestType = try #require(await test(for: SendableTests.self))
@@ -574,6 +628,84 @@ struct RelativeTraitOrderingTests {
         func x() {}
       }
     }
+  }
+}
+
+@Suite(ComposesHiddenTrait())
+struct ComposedTraitsInfluenceFilters {
+  @Test
+  func neverCalled() {
+    fatalError("Should have been disabled from the composed trait.")
+  }
+}
+
+@Suite(.hidden)
+struct ComposedTagTraitTests {
+  @Test(ComposesTagTrait()) func taggedViaComposition() {}
+}
+
+@Suite(.hidden)
+struct ComposedDisabledTraitTests {
+  @Test(ComposesDisabledTrait()) func disabledViaComposition() {}
+}
+
+@Suite(
+  BasicComposeTrait(
+    isRecursive: true,
+    composedTraits: [BasicRecursiveTrait("A")]
+  )
+)
+enum ComposedTraitTests {
+  @Suite(
+    BasicComposeTrait(
+      isRecursive: true,
+      composedTraits: [BasicRecursiveTrait("B")]
+    )
+  )
+  struct ChildA {
+    @Test
+    func x() {
+      let description = String(describing: Test.current!.traits)
+      #expect(description == "[[A], A, [B], B]")
+    }
+  }
+
+  @Suite(
+    BasicComposeTrait(
+      isRecursive: false,
+      composedTraits: [BasicRecursiveTrait("C")]
+    )
+  )
+  struct ChildB {
+    @Test
+    func x() {
+      let description = String(describing: Test.current!.traits)
+      #expect(description == "[[A], A, C]")
+    }
+  }
+}
+
+private struct ComposesHiddenTrait: SuiteTrait, TestTrait {
+  var isRecursive: Bool { true }
+  var composedTraits: [any Trait] { [.hidden] }
+}
+
+private struct ComposesTagTrait: SuiteTrait, TestTrait {
+  var isRecursive: Bool { true }
+  var composedTraits: [any Trait] { [.tags(.namedConstant)] }
+}
+
+private struct ComposesDisabledTrait: SuiteTrait, TestTrait {
+  var isRecursive: Bool { true }
+  var composedTraits: [any Trait] { [.disabled("Disabled via composition")] }
+}
+
+private struct BasicComposeTrait: SuiteTrait, TestTrait, CustomStringConvertible {
+  var isRecursive: Bool
+  var composedTraits: [any Trait]
+  var description: String {
+    let combined = composedTraits.map(String.init(describing:)).joined(separator: ".")
+    return "[\(combined)]"
   }
 }
 
