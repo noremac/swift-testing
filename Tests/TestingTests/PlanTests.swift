@@ -219,6 +219,60 @@ struct PlanTests {
     #expect(planTests.contains(testC))
   }
 
+  @Test("Composed hidden trait influences filtering")
+  func composedHiddenTraitInfluencesFiltering() async throws {
+    let suite = try #require(await test(for: ComposedTraitsInfluenceFilters.self))
+    let test = try #require(await testFunction(named: "neverCalled()", in: ComposedTraitsInfluenceFilters.self))
+    let tests = [suite, test]
+
+    let defaultPlan = await Runner.Plan(tests: tests, configuration: Configuration())
+    #expect(!defaultPlan.steps.map(\.test).contains(test))
+
+    var configuration = Configuration()
+    var filter = Configuration.TestFilter.unfiltered
+    filter.includeHiddenTests = true
+    configuration.testFilter = filter
+    let plan = await Runner.Plan(tests: tests, configuration: configuration)
+    #expect(plan.steps.map(\.test).contains(test))
+  }
+
+  @Test("Composed tag trait participates in tag filtering")
+  func composedTagTraitParticipatesInTagFiltering() async throws {
+    let test = try #require(await testFunction(named: "taggedViaComposition()", in: ComposedTagTraitTests.self))
+
+    var included = Configuration()
+    var includeFilter = Configuration.TestFilter(includingAnyOf: [.namedConstant])
+    includeFilter.includeHiddenTests = true
+    included.testFilter = includeFilter
+    let includedPlan = await Runner.Plan(tests: [test], configuration: included)
+    #expect(includedPlan.steps.map(\.test).contains(test))
+
+    var excluded = Configuration()
+    var excludeFilter = Configuration.TestFilter(excludingAnyOf: [.namedConstant])
+    excludeFilter.includeHiddenTests = true
+    excluded.testFilter = excludeFilter
+    let excludedPlan = await Runner.Plan(tests: [test], configuration: excluded)
+    #expect(!excludedPlan.steps.map(\.test).contains(test))
+  }
+
+  @Test("Composed condition trait is evaluated during planning")
+  func composedConditionTraitProducesSkip() async throws {
+    let test = try #require(await testFunction(named: "disabledViaComposition()", in: ComposedDisabledTraitTests.self))
+
+    var configuration = Configuration()
+    var filter = Configuration.TestFilter.unfiltered
+    filter.includeHiddenTests = true
+    configuration.testFilter = filter
+
+    let plan = await Runner.Plan(tests: [test], configuration: configuration)
+    let step = try #require(plan.steps.first { $0.test == test })
+    guard case let .skip(skipInfo) = step.action else {
+      Issue.record("Expected the composed .disabled trait to skip the test, but its action was \(step.action)")
+      return
+    }
+    #expect(skipInfo.comment == "Disabled via composition")
+  }
+
   @Test("Mixed included and excluded tests by ID")
   func mixedIncludedAndExcludedTests() async throws {
     let outerTestType = try #require(await test(for: SendableTests.self))
@@ -620,6 +674,85 @@ fileprivate struct ImplicitGrandparentSuite_D {
       struct ImplicitGrandchildSuite_D {
         @Test(.hidden) func example() {}
       }
+    }
+  }
+}
+
+@Suite(ComposesHiddenTrait())
+struct ComposedTraitsInfluenceFilters {
+  @Test
+  func neverCalled() {
+    Issue.record("This should have been hidden by the composed trait")
+  }
+}
+
+@Suite(.hidden)
+struct ComposedTagTraitTests {
+  @Test(ComposesTagTrait()) func taggedViaComposition() {}
+}
+
+@Suite(.hidden)
+struct ComposedDisabledTraitTests {
+  @Test(ComposesDisabledTrait()) func disabledViaComposition() {}
+}
+
+private struct ComposesHiddenTrait: SuiteTrait, TestTrait {
+  var isRecursive: Bool { true }
+  var composedTraits: [any Trait] { [.hidden] }
+}
+
+private struct ComposesTagTrait: SuiteTrait, TestTrait {
+  var isRecursive: Bool { true }
+  var composedTraits: [any Trait] { [.tags(.namedConstant)] }
+}
+
+private struct ComposesDisabledTrait: SuiteTrait, TestTrait {
+  var isRecursive: Bool { true }
+  var composedTraits: [any Trait] { [.disabled("Disabled via composition")] }
+}
+
+private struct TaskLocalAppendingTrait: SuiteTrait, TestTrait, TestScoping {
+  let value: String
+
+  init(_ value: String) {
+    self.value = value
+  }
+
+  func provideScope(for test: Test, testCase: Test.Case?, performing function: @Sendable () async throws -> Void) async throws {
+    let newValue = CompositionExpansionOrderingTests.value + value
+    try await CompositionExpansionOrderingTests.$value.withValue(newValue, operation: function)
+  }
+}
+
+private struct TaskLocalCompositionTrait: SuiteTrait, TestTrait {
+  let values: [String]
+
+  init(_ values: [String]) {
+    self.values = values
+  }
+
+  var composedTraits: [any Trait] {
+    values.map(TaskLocalAppendingTrait.init)
+  }
+}
+
+@Suite(TaskLocalCompositionTrait(["A", "B"]))
+enum CompositionExpansionOrderingTests {
+  @TaskLocal static var value = ""
+
+  @Suite(TaskLocalCompositionTrait(["C", "D"]))
+  struct ChildOne {
+    @Test(TaskLocalCompositionTrait(["E"]))
+    func x() {
+      #expect(CompositionExpansionOrderingTests.value == "ABCDE")
+    }
+  }
+
+  @Suite(TaskLocalCompositionTrait(["X", "Y"]))
+  struct ChildTwo {
+    @Test(TaskLocalCompositionTrait(["Z"]))
+    func x() {
+      #expect(CompositionExpansionOrderingTests.value == "ABXYZ")
     }
   }
 }

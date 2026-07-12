@@ -45,6 +45,16 @@ public protocol Trait: Sendable {
   /// The default value of this property is an empty array.
   var comments: [Comment] { get }
 
+  /// Additional traits to apply alongside this trait.
+  ///
+  /// The default value of this property is an empty array.
+  ///
+  /// @Metadata {
+  ///   @Available(Swift, introduced: ???)
+  ///   @Available(Xcode, introduced: ???)
+  /// }
+  var composedTraits: [any Trait] { get }
+
   /// The type of the test scope provider for this trait.
   ///
   /// The default type is `Never`, which can't be instantiated. The
@@ -285,6 +295,10 @@ extension Trait {
   public func prepare(for test: Test) async throws {}
 
   public var comments: [Comment] {
+    []
+  }
+
+  public var composedTraits: [any Trait] {
     []
   }
 }

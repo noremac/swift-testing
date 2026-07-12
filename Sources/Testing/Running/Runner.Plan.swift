@@ -123,6 +123,27 @@ extension Runner {
 // MARK: - Constructing a new runner plan
 
 extension Runner.Plan {
+  private static func _expandComposedTraits(in testGraph: inout Graph<String, Test?>) {
+    testGraph = testGraph.mapValues { _, test in
+      guard var test else {
+        return nil
+      }
+
+      let expandedTraits: [any Trait] = test.traits.flatMap(\.expandedTraits)
+        .compactMap { trait in
+          if test.isSuite {
+            trait.__as((any SuiteTrait).self)
+          } else {
+            trait.__as((any TestTrait).self)
+          }
+        }
+      if !expandedTraits.isEmpty {
+        test.traits += expandedTraits
+      }
+      return test
+    }
+  }
+
   /// Recursively apply eligible traits from a test suite to its children in a
   /// graph.
   ///
@@ -368,6 +389,8 @@ extension Runner.Plan {
       actionGraph.insertValue(runAction, at: idComponents, intermediateValue: runAction)
     }
 
+    _expandComposedTraits(in: &testGraph)
+
     // Remove any tests that should be filtered out per the runner's
     // configuration. The action graph is not modified here: actions that lose
     // their corresponding tests are effectively filtered out by the call to
@@ -463,6 +486,12 @@ extension Runner.Plan {
   ///   - configuration: The configuration to use for planning.
   public init(configuration: Configuration) async {
     await self.init(tests: Test.all, configuration: configuration)
+  }
+}
+
+private extension Trait {
+  var expandedTraits: [any Trait] {
+    composedTraits + composedTraits.flatMap(\.expandedTraits)
   }
 }
 
