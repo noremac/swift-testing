@@ -47,7 +47,7 @@ extension Tag.List: CustomStringConvertible {
 
 // MARK: - Trait, TestTrait, SuiteTrait
 
-extension Tag.List: TestTrait, SuiteTrait {
+extension Tag.List: TestTrait, SuiteTrait, TraitCompositionDisallowed {
   public var isRecursive: Bool {
     true
   }

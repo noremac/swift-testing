@@ -383,6 +383,26 @@ public struct Test: Sendable {
     )
     _properties = Allocated(properties)
   }
+
+  func expandedComposedTraits() -> [any Trait] {
+    traits
+      .flatMap(\.expandedTraits)
+      .compactMap { trait in
+        if trait.__as((any TraitCompositionDisallowed).self) != nil {
+          nil
+        } else if test.isSuite {
+          trait.__as((any SuiteTrait).self)
+        } else {
+          trait.__as((any TestTrait).self)
+        }
+      }
+  }
+}
+
+private extension Trait {
+  var expandedTraits: [any Trait] {
+    composedTraits + composedTraits.flatMap(\.expandedTraits)
+  }
 }
 
 // MARK: - Equatable, Hashable

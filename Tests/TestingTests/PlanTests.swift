@@ -236,23 +236,16 @@ struct PlanTests {
     #expect(plan.steps.map(\.test).contains(test))
   }
 
-  @Test("Composed tag trait participates in tag filtering")
-  func composedTagTraitParticipatesInTagFiltering() async throws {
+  @Test("Tag traits are removed from composed traits")
+  func tagTraitsAreRemovedFromComposedTraits() async throws {
     let test = try #require(await testFunction(named: "taggedViaComposition()", in: ComposedTagTraitTests.self))
 
-    var included = Configuration()
-    var includeFilter = Configuration.TestFilter(includingAnyOf: [.namedConstant])
-    includeFilter.includeHiddenTests = true
-    included.testFilter = includeFilter
-    let includedPlan = await Runner.Plan(tests: [test], configuration: included)
-    #expect(includedPlan.steps.map(\.test).contains(test))
-
-    var excluded = Configuration()
-    var excludeFilter = Configuration.TestFilter(excludingAnyOf: [.namedConstant])
-    excludeFilter.includeHiddenTests = true
-    excluded.testFilter = excludeFilter
-    let excludedPlan = await Runner.Plan(tests: [test], configuration: excluded)
-    #expect(!excludedPlan.steps.map(\.test).contains(test))
+    var configuration = Configuration()
+    var filter = Configuration.TestFilter(includingAnyOf: [.namedConstant])
+    filter.includeHiddenTests = true
+    configuration.testFilter = filter
+    let plan = await Runner.Plan(tests: [test], configuration: configuration)
+    #expect(!plan.steps.map(\.test).contains(test))
   }
 
   @Test("Composed condition trait is evaluated during planning")

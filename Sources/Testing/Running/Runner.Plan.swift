@@ -129,14 +129,7 @@ extension Runner.Plan {
         return nil
       }
 
-      let expandedTraits: [any Trait] = test.traits.flatMap(\.expandedTraits)
-        .compactMap { trait in
-          if test.isSuite {
-            trait.__as((any SuiteTrait).self)
-          } else {
-            trait.__as((any TestTrait).self)
-          }
-        }
+      let expandedTraits: [any Trait] = test.expandedComposedTraits()
       if !expandedTraits.isEmpty {
         test.traits += expandedTraits
       }
@@ -486,12 +479,6 @@ extension Runner.Plan {
   ///   - configuration: The configuration to use for planning.
   public init(configuration: Configuration) async {
     await self.init(tests: Test.all, configuration: configuration)
-  }
-}
-
-private extension Trait {
-  var expandedTraits: [any Trait] {
-    composedTraits + composedTraits.flatMap(\.expandedTraits)
   }
 }
 
