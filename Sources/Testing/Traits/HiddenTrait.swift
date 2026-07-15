@@ -17,7 +17,7 @@
 /// except by the specific unit test(s) which have requested to run them.
 ///
 /// This type is not part of the public interface of the testing library.
-struct HiddenTrait: TestTrait, SuiteTrait {
+struct HiddenTrait: TestTrait, SuiteTrait, ComposableTrait {
   var isRecursive: Bool {
     true
   }

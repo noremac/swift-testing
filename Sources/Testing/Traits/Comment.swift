@@ -182,9 +182,9 @@ extension Comment: Codable {}
 extension Comment.Kind: Codable {}
 #endif
 
-// MARK: - Trait, TestTrait, SuiteTrait
+// MARK: - Trait, TestTrait, SuiteTrait, ComposableTrait
 
-extension Comment: TestTrait, SuiteTrait {
+extension Comment: TestTrait, SuiteTrait, ComposableTrait {
   public var comments: [Comment] {
     [self]
   }

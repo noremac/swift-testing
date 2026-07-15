@@ -47,7 +47,7 @@ extension Tag.List: CustomStringConvertible {
 
 // MARK: - Trait, TestTrait, SuiteTrait
 
-extension Tag.List: TestTrait, SuiteTrait, TraitCompositionDisallowed {
+extension Tag.List: TestTrait, SuiteTrait {
   public var isRecursive: Bool {
     true
   }
@@ -58,6 +58,9 @@ extension Tag.List: TestTrait, SuiteTrait, TraitCompositionDisallowed {
   }
 #endif
 }
+
+@available(*, unavailable, message: "Tag traits may not be composed.")
+extension Tag.List: ComposableTrait {}
 
 extension Trait where Self == Tag.List {
   /// Construct a list of tags to apply to a test.

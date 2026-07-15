@@ -14,7 +14,7 @@ private import _TestingInternals
 ///
 /// To add this trait to a test, use ``Trait/timeLimit(_:)-4kzjp``.
 @available(_clockAPI, *) // For DocC
-public struct TimeLimitTrait: TestTrait, SuiteTrait {
+public struct TimeLimitTrait: TestTrait, SuiteTrait, ComposableTrait {
   /// A type representing the duration of a time limit applied to a test.
   ///
   /// Use this type to specify a test timeout with ``TimeLimitTrait``.

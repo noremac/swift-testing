@@ -53,7 +53,7 @@ public protocol Trait: Sendable {
   ///   @Available(Swift, introduced: ???)
   ///   @Available(Xcode, introduced: ???)
   /// }
-  var composedTraits: [any Trait] { get }
+  var composedTraits: [any ComposableTrait] { get }
 
   /// The type of the test scope provider for this trait.
   ///
@@ -298,7 +298,7 @@ extension Trait {
     []
   }
 
-  public var composedTraits: [any Trait] {
+  public var composedTraits: [any ComposableTrait] {
     []
   }
 }

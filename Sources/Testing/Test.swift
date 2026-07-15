@@ -388,9 +388,7 @@ public struct Test: Sendable {
     traits
       .flatMap(\.expandedTraits)
       .compactMap { trait in
-        if trait.__as((any TraitCompositionDisallowed).self) != nil {
-          nil
-        } else if test.isSuite {
+        if isSuite {
           trait.__as((any SuiteTrait).self)
         } else {
           trait.__as((any TestTrait).self)

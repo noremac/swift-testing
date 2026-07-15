@@ -52,9 +52,9 @@ extension Bug: Equatable, Hashable {
 extension Bug: Codable {}
 #endif
 
-// MARK: - Trait, TestTrait, SuiteTrait
+// MARK: - Trait, TestTrait, SuiteTrait, ComposableTrait
 
-extension Bug: TestTrait, SuiteTrait {
+extension Bug: TestTrait, SuiteTrait, ComposableTrait {
   public var comments: [Comment] {
     Array(title)
   }

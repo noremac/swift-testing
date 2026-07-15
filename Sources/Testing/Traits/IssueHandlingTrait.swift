@@ -29,7 +29,7 @@
 ///   @Available(Swift, introduced: 6.2)
 ///   @Available(Xcode, introduced: 26.0)
 /// }
-public struct IssueHandlingTrait: TestTrait, SuiteTrait {
+public struct IssueHandlingTrait: TestTrait, SuiteTrait, ComposableTrait {
   /// A function which handles an issue and returns an optional replacement.
   ///
   /// - Parameters:

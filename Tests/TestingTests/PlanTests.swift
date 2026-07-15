@@ -236,36 +236,6 @@ struct PlanTests {
     #expect(plan.steps.map(\.test).contains(test))
   }
 
-  @Test("Tag traits are removed from composed traits")
-  func tagTraitsAreRemovedFromComposedTraits() async throws {
-    let test = try #require(await testFunction(named: "taggedViaComposition()", in: ComposedTagTraitTests.self))
-
-    var configuration = Configuration()
-    var filter = Configuration.TestFilter(includingAnyOf: [.namedConstant])
-    filter.includeHiddenTests = true
-    configuration.testFilter = filter
-    let plan = await Runner.Plan(tests: [test], configuration: configuration)
-    #expect(!plan.steps.map(\.test).contains(test))
-  }
-
-  @Test("Composed condition trait is evaluated during planning")
-  func composedConditionTraitProducesSkip() async throws {
-    let test = try #require(await testFunction(named: "disabledViaComposition()", in: ComposedDisabledTraitTests.self))
-
-    var configuration = Configuration()
-    var filter = Configuration.TestFilter.unfiltered
-    filter.includeHiddenTests = true
-    configuration.testFilter = filter
-
-    let plan = await Runner.Plan(tests: [test], configuration: configuration)
-    let step = try #require(plan.steps.first { $0.test == test })
-    guard case let .skip(skipInfo) = step.action else {
-      Issue.record("Expected the composed .disabled trait to skip the test, but its action was \(step.action)")
-      return
-    }
-    #expect(skipInfo.comment == "Disabled via composition")
-  }
-
   @Test("Mixed included and excluded tests by ID")
   func mixedIncludedAndExcludedTests() async throws {
     let outerTestType = try #require(await test(for: SendableTests.self))
@@ -679,32 +649,12 @@ struct ComposedTraitsInfluenceFilters {
   }
 }
 
-@Suite(.hidden)
-struct ComposedTagTraitTests {
-  @Test(ComposesTagTrait()) func taggedViaComposition() {}
-}
-
-@Suite(.hidden)
-struct ComposedDisabledTraitTests {
-  @Test(ComposesDisabledTrait()) func disabledViaComposition() {}
-}
-
 private struct ComposesHiddenTrait: SuiteTrait, TestTrait {
   var isRecursive: Bool { true }
-  var composedTraits: [any Trait] { [.hidden] }
+  var composedTraits: [any ComposableTrait] { [.hidden] }
 }
 
-private struct ComposesTagTrait: SuiteTrait, TestTrait {
-  var isRecursive: Bool { true }
-  var composedTraits: [any Trait] { [.tags(.namedConstant)] }
-}
-
-private struct ComposesDisabledTrait: SuiteTrait, TestTrait {
-  var isRecursive: Bool { true }
-  var composedTraits: [any Trait] { [.disabled("Disabled via composition")] }
-}
-
-private struct TaskLocalAppendingTrait: SuiteTrait, TestTrait, TestScoping {
+private struct TaskLocalAppendingTrait: SuiteTrait, TestTrait, TestScoping, ComposableTrait {
   let value: String
 
   init(_ value: String) {
@@ -724,7 +674,7 @@ private struct TaskLocalCompositionTrait: SuiteTrait, TestTrait {
     self.values = values
   }
 
-  var composedTraits: [any Trait] {
+  var composedTraits: [any ComposableTrait] {
     values.map(TaskLocalAppendingTrait.init)
   }
 }

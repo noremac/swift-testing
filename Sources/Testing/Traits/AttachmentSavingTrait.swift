@@ -24,7 +24,7 @@ private import Synchronization
 /// testing library then evaluates the instance's condition and, if the
 /// condition is met, saves the attachments.
 @_spi(Experimental)
-public struct AttachmentSavingTrait: TestTrait, SuiteTrait {
+public struct AttachmentSavingTrait: TestTrait, SuiteTrait, ComposableTrait {
   /// A type that describes the conditions under which the testing library
   /// will save attachments.
   ///

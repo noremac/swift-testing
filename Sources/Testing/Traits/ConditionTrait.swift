@@ -100,6 +100,9 @@ public struct ConditionTrait: TestTrait, SuiteTrait {
   }
 }
 
+@available(*, unavailable, message: "Condition traits may not be composed.")
+extension ConditionTrait: ComposableTrait {}
+
 // MARK: -
 
 extension Trait where Self == ConditionTrait {

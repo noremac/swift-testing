@@ -36,7 +36,7 @@ private import Synchronization
 /// `swift test` command.)
 ///
 /// To add this trait to a test, use ``Trait/serialized``.
-public struct ParallelizationTrait: TestTrait, SuiteTrait {
+public struct ParallelizationTrait: TestTrait, SuiteTrait, ComposableTrait {
   /// A type that describes a data-based dependency that a test may have.
   ///
   /// When a test has a dependency, the testing library assumes it cannot run at

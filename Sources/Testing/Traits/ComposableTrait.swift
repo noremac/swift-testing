@@ -8,5 +8,5 @@
 // See https://swift.org/CONTRIBUTORS.txt for Swift project authors
 //
 
-/// Mark traits as disallowed for composition.
-protocol TraitCompositionDisallowed: Trait {}
+/// A protocol describing a trait that you can be composed with other traits.
+public protocol ComposableTrait: Trait {}
